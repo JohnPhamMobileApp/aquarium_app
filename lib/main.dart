@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math'; // Import for random positioning
+import 'dart:math'; 
 import 'database_helper.dart';
 
 final dbHelper = DatabaseHelper();
@@ -28,10 +28,9 @@ class MyApp extends StatelessWidget {
 // Define the Fish class
 class Fish {
   Color color;
-  double speed; // Speed can be used for movement logic
-  Offset direction; // Direction of movement
+  double speed; 
   
-  Fish({required this.color, required this.speed, required this.direction});
+  Fish({required this.color, required this.speed});
 }
 
 class MyHomePage extends StatefulWidget {
@@ -48,11 +47,15 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   final double aquariumWidth = 300; // Width of the aquarium
   final double aquariumHeight = 300; // Height of the aquarium
 
+  // Variables for controlling fish speed and color
+  double selectedSpeed = 1.0; // Default speed
+  Color selectedColor = Colors.blue; // Default color
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 16), // Short duration for fast updates (approx. 60 FPS)
+      duration: const Duration(milliseconds: 100), // Faster animation
       vsync: this,
     )..addListener(() {
         // Update fish positions based on animation progress
@@ -63,40 +66,21 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   void _updateFishPositions() {
     setState(() {
       for (int i = 0; i < fishList.length; i++) {
-        // Update position based on fish speed and direction
+        // Update position based on fish speed and animation value
+        double deltaX = fishList[i].speed * (1 + Random().nextDouble()); // Randomize movement
+        double deltaY = fishList[i].speed * (1 + Random().nextDouble()); // Randomize movement
         fishPositions[i] = Offset(
-          (fishPositions[i].dx + fishList[i].speed * fishList[i].direction.dx) % aquariumWidth,
-          (fishPositions[i].dy + fishList[i].speed * fishList[i].direction.dy) % aquariumHeight,
+          (fishPositions[i].dx + deltaX) % aquariumWidth,
+          (fishPositions[i].dy + deltaY) % aquariumHeight,
         );
-
-        // Handle wrapping around the aquarium edges
-        if (fishPositions[i].dx < 0) {
-          fishPositions[i] = Offset(aquariumWidth + fishPositions[i].dx, fishPositions[i].dy);
-        }
-        if (fishPositions[i].dy < 0) {
-          fishPositions[i] = Offset(fishPositions[i].dx, aquariumHeight + fishPositions[i].dy);
-        }
       }
     });
   }
 
   void _addFish() {
     if (fishList.length < 10) { // Limiting to 10 fish
-      Color selectedColor = Colors.primaries[fishList.length % Colors.primaries.length]; // Choose color
-      double selectedSpeed = 2.0 + (fishList.length % 5); // Example speed logic
-
-      // Set random direction
-      double randomDirectionX = (Random().nextDouble() - 0.5) * 2; // Random direction between -1 and 1
-      double randomDirectionY = (Random().nextDouble() - 0.5) * 2; // Random direction between -1 and 1
-      double length = sqrt(randomDirectionX * randomDirectionX + randomDirectionY * randomDirectionY); // Calculate the length
-      // Normalize direction manually
-      Offset randomDirection = Offset(
-        randomDirectionX / length, 
-        randomDirectionY / length
-      );
-
       setState(() {
-        fishList.add(Fish(color: selectedColor, speed: selectedSpeed, direction: randomDirection));
+        fishList.add(Fish(color: selectedColor, speed: selectedSpeed));
         fishPositions.add(Offset(Random().nextDouble() * aquariumWidth, Random().nextDouble() * aquariumHeight)); // Random position
         if (fishList.length == 1) {
           _controller.repeat(); // Start animation when first fish is added
@@ -130,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         title: const Text('VIRTUAL AQUARIUM'),
         backgroundColor: Colors.blue,
       ),
-      body: Center( 
+      body: Center( // Center the aquarium in the middle of the screen
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -158,17 +142,68 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           ],
         ),
       ),
-      bottomNavigationBar: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ElevatedButton(
-            onPressed: _addFish,
-            child: const Text('Add Fish'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: _addFish,
+                child: const Text('Add Fish'),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: _removeFish,
+                child: const Text('Delete Fish'),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: _removeFish,
-            child: const Text('Delete Fish'),
+          // Slider for adjusting speed
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Speed:'),
+              Slider(
+                value: selectedSpeed,
+                min: 0.5,
+                max: 5.0,
+                divisions: 10,
+                label: selectedSpeed.toStringAsFixed(1),
+                onChanged: (value) {
+                  setState(() {
+                    selectedSpeed = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          // Dropdown for selecting color
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Select Color:'),
+              DropdownButton<Color>(
+                value: selectedColor,
+                items: Colors.primaries.map((Color color) {
+                  return DropdownMenuItem<Color>(
+                    value: color,
+                    child: Container(
+                      width: 50,
+                      height: 20,
+                      color: color,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (Color? newValue) {
+                  setState(() {
+                    if (newValue != null) {
+                      selectedColor = newValue;
+                    }
+                  });
+                },
+              ),
+            ],
           ),
         ],
       ),
